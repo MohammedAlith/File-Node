@@ -23,10 +23,8 @@ const pool = new Pool({
   user: PGUSER,
   password:PGPASSWORD,
   database: PGDATABASE,
-  port: 5432,
-  // ssl:{
-  //   require:true
-  // }
+  port: 5432
+          
 });
 
 
@@ -161,4 +159,4 @@ app.get("/uploads/download/:id", async (req, res) => {
 
 
 // app.listen(port, () => console.log(`Server running at http://localhost:${port}`));
-export default app;
+module.exports = app;
