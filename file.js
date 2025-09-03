@@ -1,5 +1,5 @@
-// server.js
-const dotenv= require("dotenv").config();
+// file.js
+const dotenv = require("dotenv").config();
 const express = require("express");
 const multer = require("multer");
 const path = require("path");
@@ -8,9 +8,7 @@ const { Pool } = require("pg");
 const fs = require("fs");
 
 const app = express();
-const port = process.env.port|| 8000;
-
-const {PGHOST, PGDATABASE, PGUSER, PGPASSWORD}=process.env;
+const { PGHOST, PGDATABASE, PGUSER, PGPASSWORD } = process.env;
 
 // Enable CORS and JSON parsing
 app.use(cors());
@@ -21,19 +19,15 @@ app.use(express.urlencoded({ extended: true }));
 const pool = new Pool({
   host: PGHOST,
   user: PGUSER,
-  password:PGPASSWORD,
+  password: PGPASSWORD,
   database: PGDATABASE,
   port: 5432,
-  ssl: { rejectUnauthorized: false },       
+  ssl: { rejectUnauthorized: false }, // required for some hosted DBs like Heroku
 });
 
-
-
-// Ensure uploads folder exists
-const folderLocation = path.join(__dirname, "uploads");
-if (!fs.existsSync(folderLocation)) fs.mkdirSync(folderLocation);
-
-
+// Temporary uploads folder for Vercel serverless
+const folderLocation = path.join("/tmp", "uploads");
+if (!fs.existsSync(folderLocation)) fs.mkdirSync(folderLocation, { recursive: true });
 
 // Serve uploaded files
 app.use("/uploads", express.static(folderLocation));
@@ -45,10 +39,9 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
-// POST: Upload files with descriptions
+// POST: Upload files
 app.post("/uploads/files", upload.array("datas", 10), async (req, res) => {
   const files = req.files;
-
   let descriptions = [];
   try {
     const raw = req.body.descriptions || "[]";
@@ -84,75 +77,68 @@ app.post("/uploads/files", upload.array("datas", 10), async (req, res) => {
     console.error(err);
     res.status(500).json({ message: "Error saving files to DB" });
   }
-
 });
 
-// GET: Fetch all uploaded files
+// GET all files
 app.get("/uploads/files", async (req, res) => {
   const client = await pool.connect();
   try {
-    const result = await client.query("SELECT * FROM files ORDER BY id ");
+    const result = await client.query("SELECT * FROM files ORDER BY id");
     res.json(result.rows);
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Error fetching files" });
-  }finally{
+  } finally {
     client.release();
   }
-
 });
 
-// DELETE: Remove a file by ID
+// DELETE file by ID
 app.delete("/uploads/files/:id", async (req, res) => {
-   const client = await pool.connect();
-
+  const client = await pool.connect();
   const { id } = req.params;
   try {
     const fileRes = await client.query("SELECT * FROM files WHERE id=$1", [id]);
     if (fileRes.rows.length === 0) return res.status(404).json({ message: "File not found" });
 
-    const filepath = path.join(__dirname, fileRes.rows[0].filepath);
-    if (fs.existsSync(filepath)) fs.unlinkSync(filepath); // delete file from disk
+    const filepath = path.join("/tmp", fileRes.rows[0].filepath);
+    if (fs.existsSync(filepath)) fs.unlinkSync(filepath);
 
     await pool.query("DELETE FROM files WHERE id=$1", [id]);
     res.json({ message: "File deleted successfully" });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Error deleting file" });
-  }finally{
+  } finally {
     client.release();
   }
 });
 
+// DOWNLOAD file by ID
 app.get("/uploads/download/:id", async (req, res) => {
-   const client = await pool.connect();
+  const client = await pool.connect();
   const { id } = req.params;
-
   try {
-    // Fetch from DB
     const result = await client.query("SELECT filename, filepath FROM files WHERE id=$1", [id]);
     if (result.rows.length === 0) return res.status(404).send("File not found in DB");
 
     const { filename, filepath } = result.rows[0];
-    const fullPath = path.join(__dirname, filepath);
+    const fullPath = path.join("/tmp", filepath);
 
     if (!fs.existsSync(fullPath)) return res.status(404).send("File missing on server");
 
-    res.download(fullPath, filename); // download with original name
+    res.download(fullPath, filename);
   } catch (err) {
     console.error(err);
     res.status(500).send("Error downloading file");
-  }finally{
+  } finally {
     client.release();
   }
 });
 
-
-
-// if (process.env.NODE_ENV !== "production") {
-//   app.listen(port, () => {
-//     console.log(`Server running on http://localhost:${port}`);
-//   });
-// }
+// Root route
+app.get("/", (req, res) => {
+  res.send("Backend is running!");
+});
 
 module.exports = app;
