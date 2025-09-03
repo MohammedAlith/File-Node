@@ -24,9 +24,9 @@ const pool = new Pool({
   password:PGPASSWORD,
   database: PGDATABASE,
   port: 5432,
-  ssl:{
-    require:true
-  }
+  // ssl:{
+  //   require:true
+  // }
 });
 
 
