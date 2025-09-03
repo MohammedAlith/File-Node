@@ -1,11 +1,9 @@
 {
-    "version":2,
-    "builds":[{"src":"file.cjs", "use":"@vercel/node"}],
-    "routes":[
-        {
-            "src":"/(.*)",
-            "dest":"file.cjs"
-        }
-    ]
-
+  "version": 2,
+  "builds": [
+    { "src": "file.cjs", "use": "@vercel/node" }
+  ],
+  "routes": [
+    { "src": "/(.*)", "dest": "file.cjs" }
+  ]
 }

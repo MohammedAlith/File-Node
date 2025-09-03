@@ -1,23 +1,17 @@
 {
   "name": "files",
   "version": "1.0.0",
-  "description": "",
   "main": "file.cjs",
- 
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start":"node file.cjs"
+    "start": "node file.cjs"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-   
   "dependencies": {
     "dotenv": "^17.2.2",
-    "ejs": "^3.1.10",
     "express": "^5.1.0",
     "multer": "^2.0.2",
-    "pg": "^8.16.3"
+    "pg": "^8.16.3",
+    "cors": "^2.8.5",
+    "ejs": "^3.1.10"
   },
   "devDependencies": {
     "nodemon": "^3.1.10"
