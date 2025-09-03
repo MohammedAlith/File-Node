@@ -28,16 +28,6 @@ const pool = new Pool({
 });
 
 
-// app.get("/",async(req,res)=>{
-//   const client = await pool.connect();
-//   try{
-
-//   }catch(errors){
-//     console.log(errors);
-//   }finally{
-//     client.release();
-//   }
-// })
 
 // Ensure uploads folder exists
 const folderLocation = path.join(__dirname, "uploads");
