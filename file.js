@@ -22,7 +22,7 @@ const pool = new Pool({
   password: PGPASSWORD,
   database: PGDATABASE,
   port: 5432,
-  ssl: { rejectUnauthorized: false }, // required for some hosted DBs like Heroku
+  ssl: { rejectUnauthorized: false }, 
 });
 
 // Temporary uploads folder for Vercel serverless
@@ -136,9 +136,31 @@ app.get("/uploads/download/:id", async (req, res) => {
   }
 });
 
+
+// UPDATE file by ID
+app.put("/uploads/files/:id", async (req, res) => {
+  const { id } = req.params;
+  const { filename, description } = req.body;
+  const client = await pool.connect();
+  try {
+    const result = await client.query(
+      "UPDATE files SET filename=$1, description=$2 WHERE id=$3 RETURNING *",
+      [filename, description, id]
+    );
+    if (result.rows.length === 0) return res.status(404).json({ message: "File not found" });
+    res.json({ message: "File updated successfully!", file: result.rows[0] });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Error updating file" });
+  } finally {
+    client.release();
+  }
+});
+
 // Root route
 app.get("/", (req, res) => {
   res.send("Backend is running!");
 });
+
 
 module.exports = app;
