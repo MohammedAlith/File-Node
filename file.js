@@ -26,7 +26,7 @@ const pool = new Pool({
 });
 
 // Temporary uploads folder for Vercel serverless
-const folderLocation = path.join("/tmp", "uploads");
+const folderLocation = path.join("/uploads", "uploads");
 if (!fs.existsSync(folderLocation)) fs.mkdirSync(folderLocation, { recursive: true });
 
 // Serve uploaded files
@@ -101,7 +101,7 @@ app.delete("/uploads/files/:id", async (req, res) => {
     const fileRes = await client.query("SELECT * FROM files WHERE id=$1", [id]);
     if (fileRes.rows.length === 0) return res.status(404).json({ message: "File not found" });
 
-    const filepath = path.join("/tmp", fileRes.rows[0].filepath);
+    const filepath = path.join("/uploads", fileRes.rows[0].filepath);
     if (fs.existsSync(filepath)) fs.unlinkSync(filepath);
 
     await pool.query("DELETE FROM files WHERE id=$1", [id]);
@@ -123,7 +123,7 @@ app.get("/uploads/download/:id", async (req, res) => {
     if (result.rows.length === 0) return res.status(404).send("File not found in DB");
 
     const { filename, filepath } = result.rows[0];
-    const fullPath = path.join("/tmp", filepath);
+    const fullPath = path.join("/uploads", filepath);
 
     if (!fs.existsSync(fullPath)) return res.status(404).send("File missing on server");
 
