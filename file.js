@@ -107,30 +107,37 @@ app.get("/files", async (req, res) => {
 app.delete("/files/:id", async (req, res) => {
   const { id } = req.params;
   try {
+    // 1. Fetch file info
     const fileRes = await pool.query("SELECT * FROM files WHERE id=$1", [id]);
-    if (fileRes.rows.length === 0) return res.status(404).json({ message: "File not found" });
-
+    if (fileRes.rows.length === 0) {
+      return res.status(404).json({ message: "File not found" });
+    }
     const file = fileRes.rows[0];
-    const filePath = path.join(__dirname, file.filepath);
 
-    try {
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
-        console.log("✅ File deleted from disk:", filePath);
-      } else {
-        console.log("⚠️ File not found on disk, deleting only DB row");
-      }
-    } catch (err) {
-      console.warn("⚠️ File unlink failed:", err.message);
+    // 2. Delete DB row first
+    await pool.query("DELETE FROM files WHERE id=$1", [id]);
+
+    // 3. Build absolute path
+    const absolutePath = path.join(
+      __dirname,
+      file.filepath.replace("/uploads/", "uploads/")
+    );
+
+    // 4. Try to delete from disk (only local will succeed)
+    if (fs.existsSync(absolutePath)) {
+      fs.unlinkSync(absolutePath);
+      console.log("✅ File deleted from disk:", absolutePath);
+    } else {
+      console.log("⚠️ File not found on disk, only DB row deleted");
     }
 
-    await pool.query("DELETE FROM files WHERE id=$1", [id]);
     res.json({ message: "File deleted successfully" });
   } catch (err) {
-    console.error(err);
+    console.error("⚠️ Delete error:", err.message);
     res.status(500).json({ message: "Error deleting file" });
   }
 });
+
 
 // ✅ Download file
 app.get("/files/:id/download", async (req, res) => {
