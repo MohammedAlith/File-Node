@@ -11,7 +11,7 @@ const { PGHOST, PGDATABASE, PGUSER, PGPASSWORD } = process.env;
 
 // ---------------- CORS ----------------
 const corsOptions = {
-  origin: ["http://localhost:3000", "https://file-node.vercel.app, "], 
+  origin: ["http://localhost:3000", "https://file-node.vercel.app"], // ✅ correct syntax (no extra comma)
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
 };
@@ -103,7 +103,6 @@ app.get("/files", async (req, res) => {
   }
 });
 
-
 // ✅ Delete file
 app.delete("/files/:id", async (req, res) => {
   const { id } = req.params;
@@ -111,23 +110,22 @@ app.delete("/files/:id", async (req, res) => {
     const fileRes = await pool.query("SELECT * FROM files WHERE id=$1", [id]);
     if (fileRes.rows.length === 0) return res.status(404).json({ message: "File not found" });
 
-    const relativePath = fileRes.rows[0].filepath;
-    const filePath = path.join(__dirname, relativePath);
+    const file = fileRes.rows[0];
+    const filePath = path.join(__dirname, file.filepath);
 
-    // 🔑 Safe delete (works even if file not found)
     try {
       if (fs.existsSync(filePath)) {
         fs.unlinkSync(filePath);
         console.log("✅ File deleted from disk:", filePath);
       } else {
-        console.log("⚠️ File not found on disk, only DB row will be deleted");
+        console.log("⚠️ File not found on disk, deleting only DB row");
       }
     } catch (err) {
-      console.warn("⚠️ File unlink failed, skipping:", err.message);
+      console.warn("⚠️ File unlink failed:", err.message);
     }
 
     await pool.query("DELETE FROM files WHERE id=$1", [id]);
-    res.json({ message: "File deleted successfully (DB + local if available)" });
+    res.json({ message: "File deleted successfully" });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Error deleting file" });

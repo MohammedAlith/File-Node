@@ -11,7 +11,7 @@ const { PGHOST, PGDATABASE, PGUSER, PGPASSWORD } = process.env;
 
 // ---------------- CORS ----------------
 const corsOptions = {
-  origin: ["http://localhost:3000", "https://file-node.vercel.app"], // frontend URLs
+  origin: ["http://localhost:3000", "https://file-node.vercel.app, "], 
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
 };
@@ -93,7 +93,7 @@ app.post("/uploads/files", upload.array("datas", 10), async (req, res) => {
 });
 
 // ✅ Get all files
-app.get("/uploads/files", async (req, res) => {
+app.get("/files", async (req, res) => {
   try {
     const result = await pool.query("SELECT * FROM files ORDER BY id");
     res.json(result.rows);
@@ -103,26 +103,28 @@ app.get("/uploads/files", async (req, res) => {
   }
 });
 
+
 // ✅ Delete file
-app.delete("/uploads/files/:id", async (req, res) => {
-  const { id } = req.params;
+app.delete("/files/:id", async (req, res) => {
   try {
-    const fileRes = await pool.query("SELECT * FROM files WHERE id=$1", [id]);
-    if (fileRes.rows.length === 0) return res.status(404).json({ message: "File not found" });
-
-    const filePath = path.join(__dirname, fileRes.rows[0].filepath);
-    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-
-    await pool.query("DELETE FROM files WHERE id=$1", [id]);
+    const { id } = req.params;
+ 
+    const result = await db`SELECT * FROM files WHERE id = ${id};`;
+     await db`DELETE FROM files WHERE id = ${id};`;
+   
+   const __filename = fileURLToPath(import.meta.url)
+    const file = result[0];
+    const filePath = path.join(path.dirname(__filename),file.pathname.replace("/uploads/", "uploads/"));
+      console.log(filePath,"ljjk")
+    fs.unlinkSync(filePath);
     res.json({ message: "File deleted successfully" });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Error deleting file" });
+    console.warn(err)
+    res.json({ message: "File deleted successfully in db" });
   }
 });
-
 // ✅ Download file
-app.get("/uploads/download/:id", async (req, res) => {
+app.get("/files/:id/download", async (req, res) => {
   const { id } = req.params;
   try {
     const result = await pool.query("SELECT filename, filepath FROM files WHERE id=$1", [id]);
@@ -139,7 +141,7 @@ app.get("/uploads/download/:id", async (req, res) => {
 });
 
 // ✅ Update file
-app.put("/uploads/files/:id", async (req, res) => {
+app.put("/files/:id", async (req, res) => {
   const { id } = req.params;
   const { filename, description } = req.body;
   try {
