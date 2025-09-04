@@ -7,12 +7,19 @@ const { Pool } = require("pg");
 const app = express();
 const { PGHOST, PGDATABASE, PGUSER, PGPASSWORD } = process.env;
 
-// Enable CORS and JSON parsing
-app.use(cors());
+// ---------------- CORS ----------------
+const corsOptions = {
+  origin: ["http://localhost:3000", "https://file-node.vercel.app"], // frontend URLs
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+};
+app.use(cors(corsOptions)); // handles OPTIONS too
+
+// ---------------- Middleware ----------------
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// PostgreSQL connection
+// ---------------- PostgreSQL ----------------
 const pool = new Pool({
   host: PGHOST,
   user: PGUSER,
@@ -22,9 +29,11 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false },
 });
 
-// Multer memory storage (files stay in memory, we will upload to cloud)
+// ---------------- Multer ----------------
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
+
+// ---------------- Routes ----------------
 
 // POST: Upload files
 app.post("/uploads/files", upload.array("datas", 10), async (req, res) => {
@@ -52,8 +61,7 @@ app.post("/uploads/files", upload.array("datas", 10), async (req, res) => {
       const description = descriptions[i];
       const filetype = file.mimetype;
 
-      // TODO: Upload file.buffer to cloud storage here (AWS S3, GCS, etc.)
-      // Replace this with the URL returned from cloud storage
+      // Dummy file URL (replace with cloud storage later if needed)
       const fileUrl = `https://example.com/${Date.now()}-${file.originalname}`;
 
       const query = `
@@ -91,8 +99,6 @@ app.delete("/uploads/files/:id", async (req, res) => {
     const fileRes = await pool.query("SELECT * FROM files WHERE id=$1", [id]);
     if (fileRes.rows.length === 0) return res.status(404).json({ message: "File not found" });
 
-    // TODO: Delete file from cloud storage using fileRes.rows[0].filepath
-
     await pool.query("DELETE FROM files WHERE id=$1", [id]);
     res.json({ message: "File deleted successfully" });
   } catch (err) {
@@ -108,9 +114,7 @@ app.get("/uploads/download/:id", async (req, res) => {
     const result = await pool.query("SELECT filename, filepath FROM files WHERE id=$1", [id]);
     if (result.rows.length === 0) return res.status(404).send("File not found in DB");
 
-    const { filename, filepath } = result.rows[0];
-
-    // Just redirect to the cloud URL for download
+    const { filepath } = result.rows[0];
     res.redirect(filepath);
   } catch (err) {
     console.error(err);
@@ -140,4 +144,13 @@ app.get("/", (req, res) => {
   res.send("Backend is running!");
 });
 
+// ---------------- Start server (for local dev) ----------------
+if (require.main === module) {
+  const PORT = process.env.PORT || 8000;
+  app.listen(PORT, () => {
+    console.log(`🚀 Server running on http://localhost:${PORT}`);
+  });
+}
+
+// Export for Vercel
 module.exports = app;
