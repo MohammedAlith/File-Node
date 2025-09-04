@@ -11,7 +11,7 @@ const { PGHOST, PGDATABASE, PGUSER, PGPASSWORD } = process.env;
 
 // ---------------- CORS ----------------
 const corsOptions = {
-  origin: ["http://localhost:3000", "https://file-node.vercel.app"], 
+  origin: ["http://localhost:3000", "https://file-node.vercel.app"], // frontend URLs
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
 };
@@ -93,7 +93,7 @@ app.post("/uploads/files", upload.array("datas", 10), async (req, res) => {
 });
 
 // ✅ Get all files
-app.get("/files", async (req, res) => {
+app.get("/uploads/files", async (req, res) => {
   try {
     const result = await pool.query("SELECT * FROM files ORDER BY id");
     res.json(result.rows);
@@ -103,22 +103,15 @@ app.get("/files", async (req, res) => {
   }
 });
 
-
 // ✅ Delete file
-app.delete("/files/:id", async (req, res) => {
+app.delete("/uploads/files/:id", async (req, res) => {
   const { id } = req.params;
   try {
     const fileRes = await pool.query("SELECT * FROM files WHERE id=$1", [id]);
     if (fileRes.rows.length === 0) return res.status(404).json({ message: "File not found" });
 
-    // filepath is stored like: uploads/1234-myfile.pdf
-    const relativePath = fileRes.rows[0].filepath;
-    const filePath = path.join(__dirname, relativePath);
-
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath); // ✅ local delete
-      console.log("File deleted from disk:", filePath);
-    }
+    const filePath = path.join(__dirname, fileRes.rows[0].filepath);
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
 
     await pool.query("DELETE FROM files WHERE id=$1", [id]);
     res.json({ message: "File deleted successfully" });
@@ -128,9 +121,8 @@ app.delete("/files/:id", async (req, res) => {
   }
 });
 
-
 // ✅ Download file
-app.get("/files/:id/download", async (req, res) => {
+app.get("/uploads/download/:id", async (req, res) => {
   const { id } = req.params;
   try {
     const result = await pool.query("SELECT filename, filepath FROM files WHERE id=$1", [id]);
@@ -147,7 +139,7 @@ app.get("/files/:id/download", async (req, res) => {
 });
 
 // ✅ Update file
-app.put("/files/:id", async (req, res) => {
+app.put("/uploads/files/:id", async (req, res) => {
   const { id } = req.params;
   const { filename, description } = req.body;
   try {
