@@ -11,7 +11,7 @@ const { PGHOST, PGDATABASE, PGUSER, PGPASSWORD } = process.env;
 
 // ---------------- CORS ----------------
 const corsOptions = {
-  origin: ["http://localhost:3000", "https://file-node.vercel.app"], // ✅ correct syntax (no extra comma)
+  origin: ["http://localhost:3000", "https://file-react-steel.vercel.app"], // ✅ correct syntax (no extra comma)
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
 };
