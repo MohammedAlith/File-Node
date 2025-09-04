@@ -106,29 +106,33 @@ app.get("/files", async (req, res) => {
 // ✅ Delete file
 app.delete("/files/:id", async (req, res) => {
   const { id } = req.params;
+
   try {
-    // 1. Fetch file info
+    // 1. Get file info
     const fileRes = await pool.query("SELECT * FROM files WHERE id=$1", [id]);
     if (fileRes.rows.length === 0) {
       return res.status(404).json({ message: "File not found" });
     }
     const file = fileRes.rows[0];
 
-    // 2. Delete DB row first
+    // 2. Delete DB row
     await pool.query("DELETE FROM files WHERE id=$1", [id]);
 
-    // 3. Build absolute path
-    const absolutePath = path.join(
-      __dirname,
-      file.filepath.replace("/uploads/", "uploads/")
-    );
+    // 3. Delete from disk ONLY when running locally
+    if (process.env.NODE_ENV !== "production") {
+      const absolutePath = path.join(
+        __dirname,
+        file.filepath.replace("/uploads/", "uploads/")
+      );
 
-    // 4. Try to delete from disk (only local will succeed)
-    if (fs.existsSync(absolutePath)) {
-      fs.unlinkSync(absolutePath);
-      console.log("✅ File deleted from disk:", absolutePath);
+      if (fs.existsSync(absolutePath)) {
+        fs.unlinkSync(absolutePath);
+        console.log("✅ File deleted from disk:", absolutePath);
+      } else {
+        console.log("⚠️ File not found on disk, only DB row deleted");
+      }
     } else {
-      console.log("⚠️ File not found on disk, only DB row deleted");
+      console.log("ℹ️ Skipping disk delete (running on Vercel)");
     }
 
     res.json({ message: "File deleted successfully" });
@@ -137,7 +141,6 @@ app.delete("/files/:id", async (req, res) => {
     res.status(500).json({ message: "Error deleting file" });
   }
 });
-
 
 // ✅ Download file
 app.get("/files/:id/download", async (req, res) => {
